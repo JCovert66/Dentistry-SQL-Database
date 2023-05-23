@@ -1,0 +1,181 @@
+﻿--a
+SELECT 
+        PERSON_INFO.Fname,
+        PERSON_INFO.Lname,
+        MEDICATION.Medication_Info,
+        MEDICATION.Dosage,
+        MEDICATION.Date_prescribed
+FROM
+        PATIENT_HAS_MEDICATION,
+        PERSON,
+        MEDICATION,
+        PERSON_INFO 
+WHERE
+        PATIENT_HAS_MEDICATION.P_ID = PERSON.P_ID 
+        AND MEDICATION.Medication_ID = PATIENT_HAS_MEDICATION.Medication_ID
+        AND PERSON_INFO.Ssn = PERSON.Ssn 
+        AND MEDICATION.Date_prescribed >= GETDATE()
+ORDER BY
+        PERSON_INFO.Lname
+
+
+
+
+--b
+SELECT
+        PERSON_INFO.Fname,
+        PERSON_INFO.Lname,
+        PERSON.Phone,
+        PERSON.Email,
+        PERSON.Ssn,
+        INSURANCE.Policy
+FROM
+        PERSON,
+        PERSON_INFO,
+        PAYMENT,
+        INSURANCE 
+WHERE
+        PERSON_INFO.Ssn = PERSON.Ssn 
+        AND INSURANCE.Policy = 'Delta Dental'
+        AND PAYMENT.P_ID = PERSON.P_ID
+        AND PAYMENT.Payment_ID = INSURANCE.Payment_ID
+        
+
+
+--c
+SELECT
+        PERSON_INFO.LName,
+        DENTAL_PROCEDURE.Procedure_name,
+        DENTAL_PROVIDER_PERFORM_PROCEDURE.Per_date
+FROM
+        PERSON,
+        PERSON_INFO,
+        DENTAL_PROCEDURE,
+        DENTAL_PROVIDER_PERFORM_PROCEDURE
+WHERE
+        PERSON.Ssn = PERSON_INFO.Ssn
+        AND DENTAL_PROCEDURE.Procedure_ID = DENTAL_PROVIDER_PERFORM_PROCEDURE.Procedure_ID
+        AND DENTAL_PROVIDER_PERFORM_PROCEDURE.Provider_ID = PERSON.P_ID
+        AND PERSON_INFO.LName = 'Smilow'
+
+
+        
+--d
+SELECT
+        PERSON_INFO.Fname,
+        PERSON_INFO.Lname,
+        PERSON.Phone,
+        PERSON.Email,
+        PERSON.Ssn,
+        Fee_to_Invoice AS Procedure_Charge,
+        Amount AS Paid
+FROM
+        PERSON,
+        PERSON_INFO,
+        PAYMENT,
+        Payment_Apply_Bill,
+        DENTAL_PROCEDURE,
+        APPT_HAS_PROCEDURE,
+        APPOINTMENT,
+        BILL
+WHERE
+        PERSON.Ssn = PERSON_INFO.Ssn
+        AND BILL.Bill_ID = Payment_Apply_Bill.Bill_ID
+        AND PAYMENT.Payment_ID = Payment_Apply_Bill.Payment_ID
+        AND PAYMENT.P_ID = PERSON.P_ID
+        AND DENTAL_PROCEDURE.Procedure_ID = APPT_HAS_PROCEDURE.Procedure_ID
+        AND APPOINTMENT.Appt_ID = APPT_HAS_PROCEDURE.Appt_ID
+        AND APPOINTMENT.P_ID = PERSON.P_ID
+GROUP BY
+        PERSON_INFO.FName,
+        PERSON_INFO.LName,
+        PERSON.Phone,
+        PERSON.Email,
+        PERSON.Ssn,
+        DENTAL_PROCEDURE.Fee_to_Invoice,
+        PAYMENT.Amount,
+        BILL.Due_date
+HAVING
+        Fee_to_Invoice - Amount > 10
+        AND DATEDIFF(day,BILL.Due_date,GETDATE()) > 30
+
+
+
+
+--e
+WITH Payment_Amount_From_Patient AS (
+        SELECT
+                PERSON_INFO.LName,
+                SUM(Amount) as Total
+        FROM
+                PERSON,
+                PERSON_INFO,
+                PAYMENT,
+                Payment_Apply_Bill
+        WHERE
+                PAYMENT.P_ID = PERSON.P_ID
+                AND PAYMENT.Payment_ID = Payment_Apply_Bill.Payment_ID
+                AND PERSON.Ssn = PERSON_INFO.Ssn
+                AND DATEDIFF(day,PAYMENT.pay_date,GETDATE()) < 365
+        GROUP BY
+                PERSON_INFO.LName
+) SELECT
+                LName,
+                MAX(total) AS Total_Revenue
+        FROM
+                Payment_Amount_From_Patient
+        GROUP BY 
+                LName;
+
+
+
+
+--f
+        WITH Procedure_Count AS (
+                SELECT
+                        PERSON_INFO.LName,
+                        PERSON_INFO.FName,
+                        COUNT(*) AS Times
+                FROM
+                        PERSON,
+                        PERSON_INFO,
+                        DENTAL_PROVIDER_PERFORM_PROCEDURE
+                WHERE
+                        PERSON_INFO.Ssn = PERSON.Ssn
+                        AND DENTAL_PROVIDER_PERFORM_PROCEDURE.Provider_ID = PERSON.P_ID
+                        AND DATEDIFF(day,DENTAL_PROVIDER_PERFORM_PROCEDURE.Per_date,GETDATE()) < 365
+                GROUP BY
+                        PERSON_INFO.LName,
+                        PERSON_INFO.FName
+)SELECT
+                LName,
+                FName,
+                Times
+        FROM
+                Procedure_Count
+        WHERE
+                Times < 5;
+        
+        
+
+
+--g
+SELECT Procedure_Name, Fee_To_Invoice AS Paying, COUNT(Procedure_Name)
+FROM DENTAL_PROCEDURE
+GROUP BY Procedure_name, Fee_to_Invoice
+ORDER BY Paying DESC;
+
+
+--h
+SELECT Payment_Type, COUNT(Payment_Type) AS Times, SUM(Amount) AS Total
+FROM PAYMENT
+GROUP BY Payment_Type;
+
+
+
+
+--i
+SELECT policy, Count(*) as p_count
+FROM INSURANCE
+GROUP BY policy
+ORDER BY p_count DESC;

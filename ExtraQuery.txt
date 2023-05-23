@@ -1,0 +1,64 @@
+﻿--count the number of person who is living in OH
+SELECT
+        COUNT(ADDRESS.State) AS Num_Of_People_In_OH
+FROM
+        ADDRESS
+WHERE 
+        ADDRESS.State = 'OH'
+
+
+
+
+--Find out the patient who is taking most medication
+WITH Medication_Count AS (
+        SELECT
+                PERSON_INFO.LName,
+                PERSON_INFO.FName,
+                COUNT (MEDICATION.Medication_Info) AS Num_of_Medication
+        FROM
+                PERSON,
+                PERSON_INFO,
+                MEDICATION,
+                PATIENT_HAS_MEDICATION
+        WHERE
+                PERSON.Ssn = PERSON_INFO.Ssn
+                AND MEDICATION.Medication_ID = PATIENT_HAS_MEDICATION.Medication_ID
+                AND PERSON.P_ID = PATIENT_HAS_MEDICATION.P_ID
+                AND DATEDIFF(day,getdate(),MEDICATION.Date_prescribed) > 0
+        GROUP BY
+                PERSON_INFO.LName,
+                PERSON_INFO.FName,
+                MEDICATION.Medication_Info
+)SELECT
+        FName,
+        LName,
+        MAX(Num_of_Medication) AS Num_Of_Medication
+FROM
+        Medication_Count
+GROUP BY
+        FNAME, LNAME
+
+
+
+
+--Count the number appt each person had in the past
+SELECT
+        PERSON_INFO.LName,
+        PERSON_INFO.FName,
+        PERSON.Phone,
+        PERSON.Email,
+        PERSON.Ssn,
+        COUNT(Appointment.P_ID) AS Num_Of_Appt
+FROM
+        PERSON,
+        PERSON_INFO,
+        APPOINTMENT
+WHERE
+        PERSON.Ssn = PERSON_INFO.Ssn
+        AND APPOINTMENT.P_ID = PERSON.P_ID
+GROUP BY
+        PERSON_INFO.LName,
+        PERSON_INFO.FName,
+        PERSON.Phone,
+        PERSON.Email,
+        PERSON.Ssn
